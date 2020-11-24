@@ -22,10 +22,50 @@ Class CdnOptiPic {
             }
         }
         
+        $domains = COption::GetOptionString(self::MODULE_ID, "OPTIPIC_DOMAINS_{$siteId}");
+        $domainsSettings = [];
+        foreach(explode("\n", $domains) as $domain) {
+            $domain = trim($domain);
+            if($domain) {
+                $domainsSettings[] = $domain;
+            }
+        }
+        
+        $exclusionsUrl = COption::GetOptionString(self::MODULE_ID, "OPTIPIC_EXCLUSIONS_URL_{$siteId}");
+        $exclusionsUrlSettings = [];
+        foreach(explode("\n", $exclusionsUrl) as $url) {
+            $url = trim($url);
+            if($url && substr($url, 0, 1)=='/') {
+                $exclusionsUrlSettings[] = $url;
+            }
+        }
+        
+        $whitelistImgUrls = COption::GetOptionString(self::MODULE_ID, "OPTIPIC_WHITELIST_IMG_URLS_{$siteId}");
+        $whitelistImgUrlsSettings = [];
+        foreach(explode("\n", $whitelistImgUrls) as $url) {
+            $url = trim($url);
+            if($url && substr($url, 0, 1)=='/') {
+                $whitelistImgUrlsSettings[] = $url;
+            }
+        }
+        
+        $srcsetAttrs = COption::GetOptionString(self::MODULE_ID, "OPTIPIC_SRCSET_ATTRS_{$siteId}");
+        $srcsetAttrsSettings = [];
+        foreach(explode("\n", $srcsetAttrs) as $attr) {
+            $attr = trim($attr);
+            if($attr) {
+                $srcsetAttrsSettings[] = $attr;
+            }
+        }
+        
         return array(
             'site_id' => $optipicSiteID,
             'autoreplace_active' => ($autoreplaceActive=='Y'),
             'img_attrs' => $attrs,
+            'domains' => $domainsSettings,
+            'exclusions_url' => $exclusionsUrlSettings,
+            'whitelist_img_urls' => $whitelistImgUrlsSettings,
+            'srcset_attrs' => $srcsetAttrsSettings,
         );
     }
     
@@ -46,13 +86,25 @@ Class CdnOptiPic {
             ///
         
             $settings = self::getSiteSettins();
+            //var_dump($settings);
             
             if($settings['autoreplace_active'] && $settings['site_id']) {
+                
+                include_once __DIR__.'/optipic-cdn-php/ImgUrlConverter.php';
+                
+                //var_dump($settings);exit;
+                
+                $converterOptiPic = new \optipic\cdn\ImgUrlConverter($settings);
+
+                $content = $converterOptiPic->convertHtml($content);
                 
                 //$content = preg_replace('#(/[^"\'\s]+\.(png|jpg|jpeg))#simS', '//cdn.optipic.io/site-'.$settings['site_id'].'${1}', $content);
                 //$content = preg_replace('#("|\'|\()(/[^"\'\s]+\.(png|jpg|jpeg)?)("|\'|\))#simS', '${1}//cdn.optipic.io/site-'.$settings['site_id'].'${2}${4}', $content);
                 // url должен начинаться с единственного слеша (двойные слеши и отсутствие слеша пока не обрабатываем)
-                $content = preg_replace('#("|\'|\()(/[^/"\'\s]{1}[^"\'\s]*\.(png|jpg|jpeg){1}?)("|\'|\))#simS', '${1}//cdn.optipic.io/site-'.$settings['site_id'].'${2}${4}', $content);
+                // $content = preg_replace('#("|\'|\()(/[^/"\'\s]{1}[^"\'\s]*\.(png|jpg|jpeg){1}?)("|\'|\))#simS', '${1}//cdn.optipic.io/site-'.$settings['site_id'].'${2}${4}', $content);
+                
+                
+                //$content = preg_replace('#("|\'|\()(/[^/"\'\s]{1}[^"\']*\.(png|jpg|jpeg){1}?)("|\'|\))#simS', '${1}//cdn.optipic.io/site-'.$settings['site_id'].'${2}${4}', $content);
                 
                 //var_dump($settings);exit;
             
@@ -65,6 +117,7 @@ Class CdnOptiPic {
                 //$replacement = 'replaceImgsUrlCallback';
                 //$content = preg_replace($pattern, $replacement,$content);
                 
+                /*
                 // Подменяем url в тегах <img>
                 // -----------------------------------------------------------------
                 $imgAttrs = $settings['img_attrs'];
@@ -118,7 +171,7 @@ Class CdnOptiPic {
                         }
                     }
                     //exit;
-                }
+                }*/
                 // -----------------------------------------------------------------
             }
             

@@ -53,6 +53,48 @@ if($isCDN) {
                         ""
                     )
                 ),
+                array(
+                    "OPTIPIC_DOMAINS_{$arSite['LID']}", 
+                    GetMessage("ATL_OPTIPIC_DOMAINS"),
+                    "",
+                    array(
+                        "textarea",
+                        "6",
+                        "30"
+                    )
+                ),
+                array(
+                    "OPTIPIC_EXCLUSIONS_URL_{$arSite['LID']}", 
+                    GetMessage("ATL_OPTIPIC_EXCLUSIONS_URL"),
+                    "",
+                    array(
+                        "textarea",
+                        "6",
+                        "30"
+                    )
+                ),
+                array(
+                    "OPTIPIC_WHITELIST_IMG_URLS_{$arSite['LID']}", 
+                    GetMessage("ATL_OPTIPIC_WHITELIST_IMG_URLS"),
+                    "",
+                    array(
+                        "textarea",
+                        "6",
+                        "30"
+                    )
+                ),
+                array(
+                    "OPTIPIC_SRCSET_ATTRS_{$arSite['LID']}", 
+                    GetMessage("ATL_OPTIPIC_SRCSET_ATTRS"),
+                    "",
+                    array(
+                        "textarea",
+                        "6",
+                        "30"
+                    )
+                ),
+                
+                
                 /*array(
                     "CDN_AUTOREPLACE_IMG_ATTRS_{$arSite['LID']}", 
                     GetMessage("ATL_CDN_AUTOREPLACE_IMG_ATTRS"),
@@ -271,32 +313,63 @@ $arOptions = array(
 );
 }
 
-function atlOptipicSalePrint() {
+function atlOptipicSalePrint($isCdn=false) {
+    $urlToDiscountPage = 'https://optipic.io/ru/gb-free/';
+    if($isCdn) {
+        $urlToDiscountPage = 'https://optipic.io/ru/cdn/discounts/';
+    }
+    
 ?>
 
 <div class="atl-free-gb-list">
 
     <div class="atl-free-gb">
         <h3><?=GetMessage("ATL_OPTIPIC_ADD_REVIEW_MARKETPLACE")?></h3>
-        <h2><?=GetMessage("ATL_OPTIPIC_PLUS_1_GB")?></h2>
-        <a href="https://optipic.io/gb-free" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>
+        <h2>
+            <?if($isCdn):?>
+                <?=GetMessage("ATL_OPTIPIC_PLUS_100_K_VIEWS")?>
+            <?else:?>
+                <?=GetMessage("ATL_OPTIPIC_PLUS_1_GB")?>
+            <?endif;?>
+        </h2>
+        <a href="https://marketplace.1c-bitrix.ru/solutions/step2use.optimg/#tab-rating-link" target="_blank" class="link"><?=GetMessage("ATL_GOTO_MARKETPLACE")?></a>
+        <?/*<a href="<?=$urlToDiscountPage?>" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>*/?>
     </div>
 	<div class="atl-free-gb">
 		<h3><?=GetMessage("ATL_OPTIPIC_ADD_RECOM")?></h3>
-		<h2><?=GetMessage("ATL_OPTIPIC_PLUS_1_GB")?></h2>
-		<a href="https://optipic.io/gb-free" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>
+		<h2>
+            <?if($isCdn):?>
+                <?=GetMessage("ATL_OPTIPIC_PLUS_100_K_VIEWS")?>
+            <?else:?>
+                <?=GetMessage("ATL_OPTIPIC_PLUS_1_GB")?>
+            <?endif;?>
+        </h2>
+		<a href="<?=$urlToDiscountPage?>" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>
 	</div>
-    <div class="atl-free-gb">
+    <?/*<div class="atl-free-gb">
         <h3><?=GetMessage("ATL_SOCIAL_AD")?></h3>
         <h2><?=GetMessage("ATL_SOCIAL_AD_DISCOUNT")?></h2>
-        <a href="https://optipic.io/gb-free" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>
+        <a href="<?=$urlToDiscountPage?>" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>
+    </div>*/?>
+    <div class="atl-free-gb">
+        <h3><?=GetMessage("ATL_SALE_EVERYMOTH")?></h3>
+        <h2>
+            <?if($isCdn):?>
+                <?=GetMessage("ATL_SALE_EVERYMOTH_DESCR_CDN")?>
+            <?else:?>
+                <?=GetMessage("ATL_SALE_EVERYMOTH_DESCR")?>
+            <?endif;?>
+        </h2>
+        <a href="<?=$urlToDiscountPage?>" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>
     </div>
     <?/*<div class="atl-free-gb">
         <h3><?=GetMessage("ATL_OPTIPIC_BUY_PROLONG")?></h3>
         <h2><?=GetMessage("ATL_OPTIPIC_ABOUT_50GB")?></h2>
         <a href="https://optipic.ru/gb-free" target="_blank" class="link"><?=GetMessage("ATL_OPTIPIC_DETAILS")?></a>
     </div>*/?>
+    <div style="clear: both;"></div>
 </div>
+<div style="text-align: center; padding: 10px 0;"><small><a href="<?=$urlToDiscountPage?>" target="_blank"><?=GetMessage("ATL_SALE_BOTTOM_ABOUT")?></a></small></div>
 <?
 }
 
@@ -526,23 +599,25 @@ if($_GET["reinstalled"]=="Y") {
     echo $message->Show();
 }
 
-// Проверяем, хватает ли на балансе МБ для сжатия тех файлов, которые еще не сжаты
 
-$indexedTotal = CStepUseOptimg::GetSumOriginSize();
-$compressedTotal = CStepUseOptimg::GetSumCompressedSize();
-$diffBytes = CStepUseOptimg::GetSizeLeftToCompress();
-$remainingBytes = CStepUseOptimg::GetActiveBytes();
+if(!$isCDN) {
+    // Проверяем, хватает ли на балансе МБ для сжатия тех файлов, которые еще не сжаты
+    //$indexedTotal = CStepUseOptimg::GetSumOriginSize();
+    //$compressedTotal = CStepUseOptimg::GetSumCompressedSize();
+    $diffBytes = CStepUseOptimg::GetSizeLeftToCompress();
+    $remainingBytes = CStepUseOptimg::GetActiveBytes();
 
-if($diffBytes > $remainingBytes) {
-	$recommendData = CStepUseOptimg::getRecommendedTariff($diffBytes);
+    if($diffBytes > $remainingBytes) {
+        $recommendData = CStepUseOptimg::getRecommendedTariff($diffBytes);
 
-	$messageRec = new CAdminMessage(array(
-		'MESSAGE' => GetMessage('ATL_BALANCE_WARNING'),
-		'TYPE' => 'ERROR',
-		'DETAILS' => GetMessage('ATL_RECOMMEND_TARIFF') . ' <a href="' . $recommendData['url_to_pay'] .  '">' . GetMessage('ATL_BALANCE_ADD') . ' ' . CStepUseOptimg::fromUtf($recommendData['name']) . '</a>',
-		'HTML' => true
-	));
-	echo $messageRec->Show();
+        $messageRec = new CAdminMessage(array(
+            'MESSAGE' => GetMessage('ATL_BALANCE_WARNING'),
+            'TYPE' => 'ERROR',
+            'DETAILS' => GetMessage('ATL_RECOMMEND_TARIFF') . ' <a href="' . $recommendData['url_to_pay'] .  '">' . GetMessage('ATL_BALANCE_ADD') . ' ' . CStepUseOptimg::fromUtf($recommendData['name']) . '</a>',
+            'HTML' => true
+        ));
+        echo $messageRec->Show();
+    }
 }
 
 if($autoDeactivatedClassicIntegration) {
@@ -620,7 +695,7 @@ $aTabs[] = array("DIV" => "reindex", "TAB" => GetMessage("ATL_REINDEX"), "ICON" 
 $aTabs[] = array("DIV" => "docompress", "TAB" => GetMessage("ATL_DOCOMPRESS"), "ICON" => "main_settings", "TITLE" => GetMessage("ATL_DOCOMPRESS_TITLE"));
 $aTabs[] = array("DIV" => "returnorig", "TAB" => GetMessage("ATL_RETURN_ORIG"), "ICON" => "main_settings", "TITLE" => GetMessage("ATL_RETURN_ORIG_TITLE"));
 $aTabs[] = array("DIV" => "deleteorig", "TAB" => GetMessage("ATL_DELETE_ORIG"), "ICON" => "main_settings", "TITLE" => GetMessage("ATL_DELETE_ORIG_TITLE"));
-$aTabs[] = array("DIV" => "sale", "TAB" => GetMessage("ATL_SALE"), "ICON" => "main_settings", "TITLE" => GetMessage("ATL_SALE_TITLE"));
+$aTabs[] = array("DIV" => "sale", "TAB" => GetMessage("ATL_SALE"), "ICON" => "main_settings", "TITLE" => ($isCDN? GetMessage("ATL_SALE_TITLE_CDN"): GetMessage("ATL_SALE_TITLE")));
 $aTabs[] = array("DIV" => "partneram", "TAB" => GetMessage("ATL_PARTNERAM"), "ICON" => "main_settings", "TITLE" => GetMessage("ATL_PARTNERAM_TITLE"));
 
     /*$aTabs = array(
@@ -798,9 +873,9 @@ $tabControl->BeginNextTab();
 }
 <?if($isCDN):?>
 #tab_cont_config, #tab_cont_stats, #tab_cont_reindex, #tab_cont_docompress, #tab_cont_returnorig, #tab_cont_deleteorig,
-#config.adm-detail-content, #stats.adm-detail-content, #reindex.adm-detail-content, #docompress.adm-detail-content, #returnorig.adm-detail-content, #deleteorig.adm-detail-content,
-#tab_cont_sale, #sale.adm-detail-content {
-    display: none;
+#config.adm-detail-content, #stats.adm-detail-content, #reindex.adm-detail-content, #docompress.adm-detail-content, #returnorig.adm-detail-content, #deleteorig.adm-detail-content/*,
+#tab_cont_sale, #sale.adm-detail-content*/ {
+    display: none !important;
 }
 <?else:?>
 #tab_cont_cdn_config,
@@ -810,7 +885,7 @@ $tabControl->BeginNextTab();
 <?endif;?>
 </style>
 <?
-atlOptipicSalePrint();
+atlOptipicSalePrint($isCDN);
 
 // Партнерская программа
 $tabControl->BeginNextTab();
@@ -830,10 +905,12 @@ $tabControl->End();
 ?>
 </form>
 
-<?if(!$isCDN):?>
-<h2 style="text-align: center;"><?=GetMessage("ATL_SALE_TITLE");?></h2>
-<? atlOptipicSalePrint(); ?>
+<?if($isCDN):?>
+    <h2 style="text-align: center;"><?=GetMessage("ATL_SALE_TITLE_CDN");?></h2>
+<?else:?>
+    <h2 style="text-align: center;"><?=GetMessage("ATL_SALE_TITLE");?></h2>
 <?endif;?>
+<? atlOptipicSalePrint($isCDN); ?>
 
 <script language="JavaScript">
 
@@ -1122,3 +1199,49 @@ if(window.location.hash.length > 0) {
     tabControl.SelectTab(tabID);
 }
 </script>
+
+<?
+//var_dump(date('Y-m-d H:i:s'));
+//var_dump(filemtime(__FILE__));
+//var_dump(date('Y-m-d H:i:s', filemtime(__FILE__)));
+//3600
+?>
+<?if(time()-filemtime(__FILE__)>15*60):?>
+<script>
+// ---------------------------------------
+var optipicReviewCloseCookieName = 'step2use_optimg_review_popup_closed';
+if(typeof BX.getCookie(optipicReviewCloseCookieName) == 'undefined') {
+    setTimeout(function() {
+        var popup = BX.PopupWindowManager.create("popup-message", null, {
+        content: `<div style="padding: 10px; text-align: center;">
+            <h1><?=GetMessage("ATL_POPUP_H1")?></h1>
+            <h2><?=GetMessage("ATL_POPUP_H2_1")?></h2>
+            <h3><?=GetMessage("ATL_POPUP_H2_2")?></h3>
+            <h2>
+                <?if($isCDN):?>
+                <?=GetMessage("ATL_OPTIPIC_PLUS_100_K_VIEWS")?>
+                <?else:?>
+                <?=GetMessage("ATL_OPTIPIC_PLUS_1_GB")?>
+                <?endif;?>
+            </h2>
+            <div class="popup-window-buttons">
+                <a href="https://marketplace.1c-bitrix.ru/solutions/step2use.optimg/#tab-rating-link" target="_blank" class="popup-window-button ui-btn popup-window-button-create" id="optipic-add-review" style="text-decoration: none;"><?=GetMessage("ATL_GOTO_MARKETPLACE")?></a>
+            </div>
+        </div>`,
+        closeByEsc: true,
+        autoHide: true,
+        closeIcon: {
+            opacity: 1
+        },
+        events: {
+           onPopupClose: function() {
+              BX.setCookie('step2use_optimg_review_popup_closed', '1', {expires: 86400});
+           }
+        }
+    });
+    popup.show();
+    }, 10000);
+}
+// ---------------------------------------
+</script>
+<?endif;?>
