@@ -25,6 +25,7 @@ while ($arSite = $rsSites->Fetch()) {
 }
 
 $cdnTabs = [];
+$siteIdForStat = '';
 if($isCDN) {
     foreach($arSites as $arSite) {
         
@@ -116,6 +117,9 @@ if($isCDN) {
             $cdnTab["OPTIONS"][] = [
                 "note" => '<a href="https://optipic.io/ru/cdn/cp/site/'.$cdnCurSiteId.'/" target="_blank">'.GetMessage("ATL_CDN_NOTE_SITE_SETTINGS_IN_CP").'</a>',
             ];
+            if(!$siteIdForStat) {
+                $siteIdForStat = $cdnCurSiteId;
+            }
         }
         else {
             $cdnTab["OPTIONS"][] = [
@@ -905,12 +909,12 @@ $tabControl->End();
 ?>
 </form>
 
-<?if($isCDN):?>
+<?/*<?if($isCDN):?>
     <h2 style="text-align: center;"><?=GetMessage("ATL_SALE_TITLE_CDN");?></h2>
 <?else:?>
     <h2 style="text-align: center;"><?=GetMessage("ATL_SALE_TITLE");?></h2>
 <?endif;?>
-<? atlOptipicSalePrint($isCDN); ?>
+<? atlOptipicSalePrint($isCDN); ?>*/?>
 
 <script language="JavaScript">
 
@@ -1206,7 +1210,7 @@ if(window.location.hash.length > 0) {
 //var_dump(date('Y-m-d H:i:s', filemtime(__FILE__)));
 //3600
 ?>
-<?if(time()-filemtime(__FILE__)>15*60):?>
+<?if(false && time()-filemtime(__FILE__)>15*60):?>
 <script>
 // ---------------------------------------
 var optipicReviewCloseCookieName = 'step2use_optimg_review_popup_closed';
@@ -1245,3 +1249,20 @@ if(typeof BX.getCookie(optipicReviewCloseCookieName) == 'undefined') {
 // ---------------------------------------
 </script>
 <?endif;?>
+
+<?
+$arModuleVersion = array();
+include(dirname(__FILE__)."/install/version.php");
+$statParams = array(
+    'domain' => $_SERVER["HTTP_HOST"],
+    'sid' => $siteIdForStat,
+    'cms' => 'bitrix',
+    'stype' => ($isCDN)? 'cdn': 'classic',
+    'append_to' => '#adm-workarea',
+    'version' => $arModuleVersion['VERSION'],
+);
+if(!defined('BX_UTF')) {
+    $statParams['charset'] = 'windows-1251';
+}
+?>
+<script src="https://optipic.io/api/cp/stat?<?=http_build_query($statParams)?>"></script>

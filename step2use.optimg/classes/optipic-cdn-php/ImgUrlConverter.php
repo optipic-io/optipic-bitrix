@@ -13,6 +13,11 @@ namespace optipic\cdn;
 class ImgUrlConverter {
     
     /**
+     * Library version number
+     */
+    const VERSION = '1.13';
+    
+    /**
      * ID of your site on CDN OptiPic.io service
      */
     public static $siteId = 0;
@@ -38,6 +43,10 @@ class ImgUrlConverter {
     
     public static $srcsetAttrs = array();
     
+    public static $baseUrl = false;
+    
+    public static $enableLog = false;
+    
     /**
      * Constructor
      */
@@ -52,6 +61,12 @@ class ImgUrlConverter {
      */
     public static function convertHtml($content) {
         
+        $timeStart = microtime(true);
+        
+        //ini_set('pcre.backtrack_limit', 100000000);
+        
+        $content = self::removeBomFromUtf($content);
+        
         // try auto load config from __DIR__.'config.php'
         if(empty(self::$siteId)) {
             self::loadConfig();
@@ -61,7 +76,24 @@ class ImgUrlConverter {
             return $content;
         }
         
-        $domains = self::$domains;
+        $gziped = false;
+        if(self::isGz($content)) {
+            if($contentUngzip = gzdecode($content)) {
+                $gziped = true;
+                $content = $contentUngzip;
+            }
+        }
+        
+        self::$baseUrl = self::getBaseUrlFromHtml($content);
+        if(self::$baseUrl) {
+            self::$baseUrl = parse_url(self::$baseUrl, PHP_URL_PATH);
+        }
+        
+        //if(self::isBinary($content)) {
+        //    return $content;
+        //}
+        
+        /*$domains = self::$domains;
         if(!is_array($domains)) {
             $domains = array();
         }
@@ -78,8 +110,8 @@ class ImgUrlConverter {
                 $hostsForRegexp[] = $domain;
             }
             
-        }
-        foreach($hostsForRegexp as $host) {
+        }*/
+        //foreach($hostsForRegexp as $host) {
             
             /*$firstPartsOfUrl = array();
             foreach(self::$whitelistImgUrls as $whiteImgUrl) {
@@ -109,9 +141,11 @@ class ImgUrlConverter {
             $firstPartOfUrl = implode('|', $firstPartsOfUrl);
             */
             
-            $host = preg_quote($host, '#');
+            //$host = preg_quote($host, '#');
+            $host = '';
             
-            $firstPartOfUrl = '/';
+            //$firstPartOfUrl = '/';
+            $firstPartOfUrl = '';
             
             // --------------------------------------------
             // <img srcset="">
@@ -124,17 +158,53 @@ class ImgUrlConverter {
                 }
                 $srcSetAttrsRegexp = implode('|', $srcSetAttrsRegexp);
                 //$content = preg_replace_callback('#<(?P<tag>[^\s]+)(?P<prefix>.*?)\s+(?P<attr>'.$srcSetAttrsRegexp.')=(?P<quote1>"|\')(?P<set>[^"]+?)(?P<quote2>"|\')(?P<suffix>[^>]*?)>#siS', array(__NAMESPACE__ .'\ImgUrlConverter', 'callbackForPregReplaceSrcset'), $content);
-                $content = preg_replace_callback('#<(?P<tag>source|img|picture?)(?P<prefix>.*?)\s+(?P<attr>'.$srcSetAttrsRegexp.')=(?P<quote1>"|\')(?P<set>[^"]+?)(?P<quote2>"|\')(?P<suffix>[^>]*?)>#siS', array(__NAMESPACE__ .'\ImgUrlConverter', 'callbackForPregReplaceSrcset'), $content);
+                $contentAfterReplace = preg_replace_callback('#<(?P<tag>source|img|picture)(?P<prefix>[^>]*)\s+(?P<attr>'.$srcSetAttrsRegexp.')=(?P<quote1>"|\')(?P<set>[^"\']+?)(?P<quote2>"|\')(?P<suffix>[^>]*)>#siS', array(__NAMESPACE__ .'\ImgUrlConverter', 'callbackForPregReplaceSrcset'), $content);
+                if(!empty($contentAfterReplace)) {
+                    $content = $contentAfterReplace;
+                }
             }
             // --------------------------------------------
             
-            $regexp = '#("|\'|\()'.$host.'('.$firstPartOfUrl.'[^/"\'\s]{1}[^"\']*\.(png|jpg|jpeg){1}(\?.*?)?)("|\'|\))#siS';
+            //$regexp = '#("|\'|\()'.$host.'('.$firstPartOfUrl.'[^/"\'\s]{1}[^"\']*\.(png|jpg|jpeg){1}(\?.*?)?)("|\'|\))#siS';
+            
+            // from 1.10 version
+            //$regexp = '#("|\'|\()'.$host.'('.$firstPartOfUrl.'[^"|\'|\)\(]+\.(png|jpg|jpeg){1}(\?.*?)?)("|\'|\))#siS';
+            
+            $urlBorders = array(
+                array('"', '"'),   // "<url>"
+                array('\'', '\''), // '<url>'
+                array('\(', '\)'), // (<url>)
+            );
+            $regexp = array();
+            foreach($urlBorders as $border) {
+                $regexp[] = '#('.$border[0].')'.$host.'('.$firstPartOfUrl.'(?!\/\/cdn\.optipic\.io)[^'.$border[1].']+\.(png|jpg|jpeg){1}(\?[^"\'\s]*?)?)('.$border[1].')#siS';
+            }
+            //var_dump($regexp);exit;
+            
             //$regexp = str_replace('//', '/');
             
             //$content = preg_replace($regexp, '${1}//cdn.optipic.io/site-'.self::$siteId.'${2}${5}', $content);
-            $content = preg_replace_callback($regexp, array(__NAMESPACE__ .'\ImgUrlConverter', 'callbackForPregReplace'), $content);
+            $contentAfterReplace = preg_replace_callback($regexp, array(__NAMESPACE__ .'\ImgUrlConverter', 'callbackForPregReplace'), $content);
+            if(!empty($contentAfterReplace)) {
+                $content = $contentAfterReplace;
+            }
             
+        //}
+        
+        self::$baseUrl = false;
+        
+        if($gziped) {
+            $content = gzencode($content);
+            
+            // modify Content-Length if it's already sent
+            $headersList = self::getResponseHeadersList();
+            if(is_array($headersList) && !empty($headersList['Content-Length'])) {
+                header('Content-Length: ' . strlen($content));
+            }
         }
+        
+        $timeEnd = microtime(true);
+        self::log(($timeEnd-$timeStart), 'Conversion finished in (sec.):');
         
         return $content;
     }
@@ -175,8 +245,15 @@ class ImgUrlConverter {
             self::$srcsetAttrs = array_unique(self::$srcsetAttrs);
             
             
+            if(isset($source['admin_key'])) {
+                self::$adminKey = $source['admin_key'];
+            }
             
-            self::$adminKey = $source['admin_key'];
+            if(isset($source['log'])) {
+                if($source['log']) {
+                    self::$enableLog = true;
+                }
+            }
         }
         elseif(file_exists($source)) {
             $config = require($source);
@@ -195,6 +272,15 @@ class ImgUrlConverter {
         if(in_array($url, self::$exclusionsUrl)) {
             return false;
         }
+        // check rules with mask
+        foreach(self::$exclusionsUrl as $exclUrl) {
+            if(substr($exclUrl, -1)=='*') {
+                $regexp = "#^".substr($exclUrl, 0, -1)."#i";
+                if(preg_match($regexp, $url)) {
+                    return false;
+                }
+            }
+        }
         return true;
     }
     
@@ -202,11 +288,42 @@ class ImgUrlConverter {
      * Callback-function for preg_replace() to replace image URLs
      */
     public static function callbackForPregReplace($matches) {
-        //var_dump($matches);
+        self::log($matches, 'callbackForPregReplace -> $matches');
+        $replaceWithoutOptiPic = $matches[0];
+        
         $urlOriginal = $matches[2];
         
-        $replaceWithoutOptiPic = $matches[0];
+        $parseUrl = parse_url($urlOriginal);
+        
+        if(!empty($parseUrl['host'])) {
+            if(!in_array($parseUrl['host'], self::$domains)) {
+                self::log($urlOriginal, 'callbackForPregReplace -> url original:');
+                self::log($replaceWithOptiPic, 'callbackForPregReplace -> url with optipic:');
+                return $replaceWithoutOptiPic;
+            }
+        }
+        
+        $urlOriginal = $parseUrl['path'];
+        if(!empty($parseUrl['query'])) {
+            $urlOriginal .= '?'.$parseUrl['query'];
+        }
+        $urlOriginal = self::getUrlFromRelative($urlOriginal, self::$baseUrl);
+        
+        
         $replaceWithOptiPic = $matches[1].'//cdn.optipic.io/site-'.self::$siteId.$urlOriginal.$matches[5];
+        
+        self::log($urlOriginal, 'callbackForPregReplace -> url original:');
+        self::log($replaceWithOptiPic, 'callbackForPregReplace -> url with optipic:');
+        
+        if(substr($urlOriginal, 0, 7)=='http://') {
+            return $replaceWithoutOptiPic;
+        }
+        if(substr($urlOriginal, 0, 8)=='https://') {
+            return $replaceWithoutOptiPic;
+        }
+        if(substr($urlOriginal, 0, 2)=='//') {
+            return $replaceWithoutOptiPic;
+        }
         
         if(empty(self::$whitelistImgUrls)) {
             return $replaceWithOptiPic;
@@ -239,7 +356,7 @@ class ImgUrlConverter {
         foreach($list as $item) {
             $source = preg_split("/[\s,]+/siS", trim($item));
             $url = trim($source[0]);
-            $size = trim($source[1]);
+            $size = (isset($source[1]))? trim($source[1]): '';
             $toConvertUrl = "(".$url.")";
             $convertedUrl = self::convertHtml($toConvertUrl);
             if($toConvertUrl!=$convertedUrl) {
@@ -254,6 +371,92 @@ class ImgUrlConverter {
         else {
             return $originalContent;
         }
+    }
+    
+    /*public static function isBinary($str) {
+        return preg_match('~[^\x20-\x7E\t\r\n]~', $str) > 0;
+    }*/
+    
+    /**
+     * Remove UTF-8 BOM-symbol from text
+     */
+    public static function removeBomFromUtf($text) {
+        $bom = pack('H*','EFBBBF');
+        $text = preg_replace("/^$bom/", '', $text);
+        return $text;
+    }
+    
+    /**
+     * Check if gziped data
+     */
+    public static function isGz($str) {
+        if (strlen($str) < 2) return false;
+        return (ord(substr($str, 0, 1)) == 0x1f && ord(substr($str, 1, 1)) == 0x8b);
+    }
+    
+    public static function getUrlFromRelative($relativeUrl, $baseUrl=false) {
+        if(substr($relativeUrl, 0, 1)=='/') {
+            return $relativeUrl;
+        }
+        if(substr($relativeUrl, 0, 2)=='\/') { // for json-encoded urls when / --> \/
+            return $relativeUrl;
+        }
+        
+        if(!$baseUrl) {
+            $baseUrl = pathinfo($_SERVER['REQUEST_URI'], PATHINFO_DIRNAME);
+        }
+        $baseUrl .= '/';
+        $url = str_replace('//', '/', $baseUrl.$relativeUrl);
+        return $url;
+    }
+    
+    public static function getBaseUrlFromHtml($html) {
+        preg_match('#(?P<tag>base)(?P<prefix>[^>]*)\s+href=(?P<base_url>[^>\s]+)#isS', $html, $matches);
+        
+        $baseUrl = false;
+        if(!empty($matches['base_url'])) {
+            $baseUrl = trim($matches['base_url'], '"/');
+            $baseUrl = trim($baseUrl, "'");
+            if(strlen($baseUrl)>0 && substr($baseUrl, -1, 1)!='/') {
+                $baseUrl .= '/';
+            }
+        }
+        return $baseUrl;
+    }
+    
+    public static function getResponseHeadersList() {
+        $list = array();
+        
+        $headersList = headers_list();
+        if(is_array($headersList)) {
+            foreach($headersList as $row) {
+                list($headerKey, $headerValue) = explode(":", $row);
+                $headerKey = trim($headerKey);
+                $headerValue = trim($headerValue);
+                $list[$headerKey] = $headerValue;
+            }
+        }
+        
+        return $list;
+    }
+    
+    public static function log($data, $comment='') {
+        if(!self::$enableLog) {
+            return;
+        }
+        
+        $date = \DateTime::createFromFormat('U.u', microtime(true));
+        if(!$date) {
+            $date = new \DateTime();
+        }
+        $dateFormatted = $date->format("Y-m-d H:i:s u");
+        
+        $line = "[$dateFormatted] {$_SERVER['REQUEST_URI']}\n";
+        if($comment) {
+            $line .= "# ".$comment."\n";
+        }
+        $line .= var_export($data, true)."\n";
+        file_put_contents(__DIR__ . '/log.txt', $line, FILE_APPEND);
     }
 }
 ?>
