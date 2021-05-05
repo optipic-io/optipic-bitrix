@@ -1260,9 +1260,58 @@ $statParams = array(
     'stype' => ($isCDN)? 'cdn': 'classic',
     'append_to' => '#adm-workarea',
     'version' => $arModuleVersion['VERSION'],
+    //'site_chooser_selector' => "input[name^='OPTIPIC_SITE_ID_']",
 );
 if(!defined('BX_UTF')) {
     $statParams['charset'] = 'windows-1251';
 }
 ?>
 <script src="https://optipic.io/api/cp/stat?<?=http_build_query($statParams)?>"></script>
+
+<? CJSCore::Init(array("jquery")); ?>
+<script>
+/*$(function() {
+    //var siteIdInputSelector = "input[name='OPTIPIC_SITE_ID_s1']:first";
+    //var $siteIdInput = $(siteIdInputSelector);
+    
+    var clickedButtonChooseSite = [];
+    
+    $("input[name^='OPTIPIC_SITE_ID_']").each(function() {
+        $('<button class="optipic-cdn-site-choose-button">...</button>').data("optipic-target", "input[name='" + $(this).attr("name") + "']").insertAfter($(this));
+    });
+    
+    
+    
+    window.addEventListener("message", function(event) {
+        console.log(event.data.siteId);
+        if(clickedButtonChooseSite.length==1) {
+            if(selectorInput = clickedButtonChooseSite.data("optipic-target")) {
+                $(selectorInput).val(event.data.siteId);
+            }
+            //$siteIdInput.val(event.data.siteId);
+        }
+        window.newWin.close();
+    }, false);
+    
+    $(".optipic-cdn-site-choose-button").click(function(e) {
+        e.preventDefault();
+        
+        clickedButtonChooseSite = $(this);
+        
+        //window.newWin = window.open("https://optipic.io/ru/cdn/cp/?chooser=1", "optipic", "width=735,height=500");
+        var siteHost = window.location.protocol + '//' + window.location.host;
+        window.newWin = window.open("https://optipic.io/en/cdn/cp/site-selector/?site_host=" + siteHost + "&layoutmode=hide-footer-and-menu", "optipic", "width=735,height=500");  
+        
+        //newWin.document.write("Привет, мир!");
+    });
+    
+    //$siteIdInput.focus(function() {
+    //    $("#optipic-cdn-site-choose-button").trigger("click");
+    //});
+});*/
+</script>
+<style>
+/*.optipic-cdn-site-choose-button {
+    margin-left: 10px;
+}*/
+</style>

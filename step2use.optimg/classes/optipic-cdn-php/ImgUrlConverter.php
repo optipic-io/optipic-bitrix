@@ -6,6 +6,7 @@
  * @author optipic.io
  * @package https://github.com/optipic-io/optipic-cdn-php
  * @copyright (c) 2020, https://optipic.io
+ * @license    GNU General Public License version 2 or later
  */
 
 namespace optipic\cdn;
@@ -15,7 +16,7 @@ class ImgUrlConverter {
     /**
      * Library version number
      */
-    const VERSION = '1.13';
+    const VERSION = '1.15';
     
     /**
      * ID of your site on CDN OptiPic.io service
@@ -70,6 +71,10 @@ class ImgUrlConverter {
         // try auto load config from __DIR__.'config.php'
         if(empty(self::$siteId)) {
             self::loadConfig();
+        }
+        
+        if(empty(self::$siteId)) {
+            return $content;
         }
         
         if(!self::isEnabled()) {
@@ -209,6 +214,36 @@ class ImgUrlConverter {
         return $content;
     }
     
+    public static function trimList($list) {
+        $trimmed = array();
+        foreach ($list as $ind => $item) {
+            $item = trim(str_replace(array("\r\n", "\n", "\r"), '', $item));
+            if(!empty($item)) {
+                $trimmed[] = $item;
+            }
+        }
+        return $trimmed;
+    }
+    
+    public static function textToArray($data) {
+        if(is_array($data)) {
+            $array = $data;
+        }
+        else {
+            $array = explode("\n", $data); 
+        }
+        
+        if(!is_array($array)) {
+            $array = array();
+        }
+        $array = self::trimList($array);
+        $array = array_unique($array);
+        
+        
+        
+        return $array;
+    }
+    
     /**
      * Load config from file or array
      */
@@ -220,30 +255,13 @@ class ImgUrlConverter {
         if(is_array($source)) {
             self::$siteId = $source['site_id'];
             
-            self::$domains = $source['domains'];
-            if(!is_array(self::$domains)) {
-                self::$domains = array();
-            }
-            self::$domains = array_unique(self::$domains);
+            self::$domains = self::textToArray($source['domains']);
             
-            self::$exclusionsUrl = $source['exclusions_url'];
-            if(!is_array(self::$exclusionsUrl)) {
-                self::$exclusionsUrl = array();
-            }
-            self::$exclusionsUrl = array_unique(self::$exclusionsUrl);
+            self::$exclusionsUrl = self::textToArray($source['exclusions_url']);
             
-            self::$whitelistImgUrls = $source['whitelist_img_urls'];
-            if(!is_array(self::$whitelistImgUrls)) {
-                self::$whitelistImgUrls = array();
-            }
-            self::$whitelistImgUrls = array_unique(self::$whitelistImgUrls);
+            self::$whitelistImgUrls = self::textToArray($source['whitelist_img_urls']);
             
-            self::$srcsetAttrs = $source['srcset_attrs'];
-            if(!is_array(self::$srcsetAttrs)) {
-                self::$srcsetAttrs = array();
-            }
-            self::$srcsetAttrs = array_unique(self::$srcsetAttrs);
-            
+            self::$srcsetAttrs = self::textToArray($source['srcset_attrs']);
             
             if(isset($source['admin_key'])) {
                 self::$adminKey = $source['admin_key'];
@@ -291,6 +309,11 @@ class ImgUrlConverter {
         self::log($matches, 'callbackForPregReplace -> $matches');
         $replaceWithoutOptiPic = $matches[0];
         
+        // skip images from json (json-encoded)
+        if(stripos($replaceWithoutOptiPic, "\\/")!==false) {
+            return $replaceWithoutOptiPic;
+        }
+        
         $urlOriginal = $matches[2];
         
         $parseUrl = parse_url($urlOriginal);
@@ -298,9 +321,14 @@ class ImgUrlConverter {
         if(!empty($parseUrl['host'])) {
             if(!in_array($parseUrl['host'], self::$domains)) {
                 self::log($urlOriginal, 'callbackForPregReplace -> url original:');
-                self::log($replaceWithOptiPic, 'callbackForPregReplace -> url with optipic:');
+                self::log($replaceWithoutOptiPic, 'callbackForPregReplace -> url with optipic:');
                 return $replaceWithoutOptiPic;
             }
+        }
+        
+        $ext = pathinfo($parseUrl['path'], PATHINFO_EXTENSION);
+        if(!in_array($ext, array('png', 'jpg', 'jpeg'))) {
+            return $replaceWithoutOptiPic; 
         }
         
         $urlOriginal = $parseUrl['path'];
@@ -403,11 +431,32 @@ class ImgUrlConverter {
         }
         
         if(!$baseUrl) {
-            $baseUrl = pathinfo($_SERVER['REQUEST_URI'], PATHINFO_DIRNAME);
+            //$baseUrl = pathinfo($_SERVER['REQUEST_URI'], PATHINFO_DIRNAME);
+            $baseUrl = self::getBaseDirOfUrl($_SERVER['REQUEST_URI']);
         }
         $baseUrl .= '/';
         $url = str_replace('//', '/', $baseUrl.$relativeUrl);
         return $url;
+    }
+    
+    
+    
+    /**
+     * Get main base path (dir) from full URL
+     *
+     * https://domain.com/catalog/catalog.php --> https://domain.com/catalog/
+     */
+    public static function getBaseDirOfUrl($url) {
+        $urlParsed = parse_url($url);
+        if(empty($urlParsed['path'])) {
+            return '/';
+        }
+        $urlPath = $urlParsed['path'];
+        $pathinfo = pathinfo($urlPath);
+        if(!empty($pathinfo['extension'])) {
+            return $pathinfo['dirname'];
+        }
+        return $urlPath;
     }
     
     public static function getBaseUrlFromHtml($html) {
@@ -417,6 +466,7 @@ class ImgUrlConverter {
         if(!empty($matches['base_url'])) {
             $baseUrl = trim($matches['base_url'], '"/');
             $baseUrl = trim($baseUrl, "'");
+            $baseUrl = self::getBaseDirOfUrl($baseUrl);
             if(strlen($baseUrl)>0 && substr($baseUrl, -1, 1)!='/') {
                 $baseUrl .= '/';
             }
@@ -440,6 +490,11 @@ class ImgUrlConverter {
         return $list;
     }
     
+    
+    
+    /**
+     * Log debug info into file
+     */
     public static function log($data, $comment='') {
         if(!self::$enableLog) {
             return;
@@ -457,6 +512,48 @@ class ImgUrlConverter {
         }
         $line .= var_export($data, true)."\n";
         file_put_contents(__DIR__ . '/log.txt', $line, FILE_APPEND);
+    }
+    
+    
+    
+    public static function getDefaultSettings($settingKey=false) {
+        $settings = array(
+            'srcset_attrs' => array(
+                'srcset', 
+                'data-srcset',
+            ),
+            'domains' => array(),
+        );
+        
+        if($currentDomain = self::getCurrentDomain(true)) {
+            $settings['domains'] = array(
+                $currentDomain,
+                'www.'.$currentDomain,
+            );
+        }
+        
+        if($settingKey) {
+            return (!empty($settings[$settingKey]))? $settings[$settingKey]: '';
+        }
+        
+        return $settings;
+    }
+    
+    
+    public static function getCurrentDomain($trimWww=false) {
+        if(empty($_SERVER['HTTP_HOST'])) {
+            return false;
+        }
+        
+        $currentHost = explode(":", $_SERVER['HTTP_HOST']);
+        $currentHost = trim($currentHost[0]);
+        if($trimWww) {
+            if(stripos($currentHost, 'www.')===0) {
+                $currentHost = substr($currentHost, 4);
+            }
+        }
+        
+        return $currentHost;
     }
 }
 ?>
