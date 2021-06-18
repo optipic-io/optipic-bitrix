@@ -139,4 +139,6 @@ $MESS['ATL_POPUP_H1'] = 'Понравился OptiPic?';
 $MESS['ATL_POPUP_H2_1'] = 'Оставьте отзыв в Маретплейс';
 $MESS['ATL_POPUP_H2_2'] = 'и получите бонус';
 $MESS['ATL_POPUP_H2_3'] = '+100 000 показов';
+$MESS['ATL_OPTIPIC_CDN_DOMAIN'] = 'CDN домен';
+$MESS['ATL_OPTIPIC_CDN_DOMAIN_DESCRIPTION'] = 'Домен через который будет работать CDN OptiPic. Вы можете использовать поддомен вашего домена (img.yourdomain.com, optipic.yourdomain.com и т.п.) вместо стандартного cdn.optipic.io. Для подключению своего поддомена обратитесь в техподдержку OptiPic.';
 ?>

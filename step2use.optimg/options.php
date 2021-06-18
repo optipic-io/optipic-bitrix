@@ -94,6 +94,19 @@ if($isCDN) {
                         "30"
                     )
                 ),
+                array(
+                    "OPTIPIC_CDN_DOMAIN_{$arSite['LID']}", 
+                    GetMessage("ATL_OPTIPIC_CDN_DOMAIN"),//.':<br/>'.GetMessage("ATL_OPTIPIC_CDN_DOMAIN_DESCRIPTION"),
+                    "",
+                    array(
+                        "text",
+                        "",
+                        ""
+                    )
+                ),
+                array(
+                    "note" => GetMessage("ATL_OPTIPIC_CDN_DOMAIN") . ': ' . GetMessage("ATL_OPTIPIC_CDN_DOMAIN_DESCRIPTION")
+                ),
                 
                 
                 /*array(

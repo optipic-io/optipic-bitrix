@@ -12,6 +12,8 @@ Class CdnOptiPic {
         $optipicSiteID = COption::GetOptionString(self::MODULE_ID, "OPTIPIC_SITE_ID_".$siteId, "");
         $autoreplaceActive = COption::GetOptionString(self::MODULE_ID, "CDN_AUTOREPLACE_ACTIVE_".$siteId, "N");
         
+        $cdnDomain = COption::GetOptionString(self::MODULE_ID, "OPTIPIC_CDN_DOMAIN_".$siteId, "");
+        
         $imgAttrs = COption::GetOptionString(self::MODULE_ID, "CDN_AUTOREPLACE_IMG_ATTRS_{$siteId}", self::DEFAULT_IMG_ATTRS);
         
         $attrs = [];
@@ -66,6 +68,7 @@ Class CdnOptiPic {
             'exclusions_url' => $exclusionsUrlSettings,
             'whitelist_img_urls' => $whitelistImgUrlsSettings,
             'srcset_attrs' => $srcsetAttrsSettings,
+            'cdn_domain' => $cdnDomain,
         );
     }
     
