@@ -16,7 +16,7 @@ class ImgUrlConverter
     /**
      * Library version number
      */
-    const VERSION = '1.22';
+    const VERSION = '1.25';
     
     /**
      * ID of your site on CDN OptiPic.io service
@@ -213,7 +213,7 @@ class ImgUrlConverter
         $urlBorders = array(
             array('"', '"', '"'),       // "<url>"
             array('\'', '\'', '\''),    // '<url>'
-            array('\(', '\)', '\)'),    // (<url>)
+            array('\(', '\)', '\)\('),    // (<url>)
             array('\\\"', '\\\"', '"'), // "<url>" in JSON
             array("\\\'", "\\\'", "'"), // '<url>' in JSON
         );
@@ -235,7 +235,7 @@ class ImgUrlConverter
         
         $regexp = array();
         foreach ($urlBorders as $border) {
-            $regexp[] = '#('.$border[0].')'.$host.'('.$firstPartOfUrl.'(?!'.$cdnDomainsForRegexp.')[^'.$border[2].']+\.(png|jpg|jpeg){1}(\?[^"\'\s]*?)?)\s*('.$border[1].')#siS';
+            $regexp[] = '#('.$border[0].')\s*'.$host.'('.$firstPartOfUrl.'(?!'.$cdnDomainsForRegexp.')[^'.$border[2].']+\.(png|jpg|jpeg){1}(\?[^"\'\s]*?)?)\s*('.$border[1].')#siS';
         }
         //var_dump($regexp);exit;
         
@@ -532,6 +532,31 @@ class ImgUrlConverter
         }
         //$baseUrl .= '/';
         
+        // CASE filepath ".img.png" (remove first dot)
+        if (substr($relativeUrl, 0, 1) == '.' && substr($relativeUrl, 1, 1) != '.') {
+            $relativeUrl = substr($relativeUrl, 1);
+        }
+        // CASE baseUrl "." (remove first dot)
+        if (strlen($baseUrl)>0 && substr($baseUrl, 0, 1) == '.' && substr($baseUrl, 1, 1) != '.') {
+            $baseUrl = (strlen($baseUrl)>1)? "".substr($baseUrl, 1): "";
+        }
+        
+        // CASE /catalog + img.png (/catalogimg.png is wrong)
+        if (substr($baseUrl, -1)!='/' && substr($relativeUrl, 0, 1) != '/') {
+            $tryUrl = str_replace($slash.$slash, $slash, $baseUrl.$slash.$relativeUrl);
+            // Try to /catalog/img.png
+            if (file_exists(self::getDocumentDoot().$slash.$tryUrl)) {
+                return $tryUrl;
+            }
+            // Try to /img.png
+            else {
+                $tryUrl = str_replace($slash.$slash, $slash, '/'.$relativeUrl);
+                if (file_exists(self::getDocumentDoot().$slash.$tryUrl)) {
+                    return $tryUrl;
+                }
+            }
+        }
+        
         // double slash to one slash
         $url = str_replace($slash.$slash, $slash, $baseUrl.$relativeUrl);
         return $url;
@@ -641,7 +666,7 @@ class ImgUrlConverter
         }
         $dateFormatted = $date->format("Y-m-d H:i:s u");
         
-        $line = "[$dateFormatted] {self::$url}\n";
+        $line = "[$dateFormatted] ".self::$url."\n";
         if ($comment) {
             $line .= "# ".$comment."\n";
         }
@@ -716,12 +741,19 @@ class ImgUrlConverter
     }
     
     
-    public static function htmlHasAmpMarkup($html) {
+    public static function htmlHasAmpMarkup($html)
+    {
          return (stripos($html, "<html amp")!==false);
     }
     
     
-    public static function htmlHasXmlMarkup($html) {
+    public static function htmlHasXmlMarkup($html)
+    {
          return (stripos($html, "<?xml")!==false);
+    }
+    
+    public static function getDocumentDoot()
+    {
+         return $_SERVER['DOCUMENT_ROOT'];
     }
 }
