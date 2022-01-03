@@ -16,7 +16,7 @@ class ImgUrlConverter
     /**
      * Library version number
      */
-    const VERSION = '1.25';
+    const VERSION = '1.27';
     
     /**
      * ID of your site on CDN OptiPic.io service
@@ -70,10 +70,10 @@ class ImgUrlConverter
     public static function convertHtml($content, $detectBaseUrl = true)
     {
         
-        if(empty(self::$url)) {
+        if (empty(self::$url)) {
             self::$url = $_SERVER['REQUEST_URI'];
         }
-        if(empty(self::$host)) {
+        if (empty(self::$host)) {
             self::$host = $_SERVER['HTTP_HOST'];
         }
         
@@ -122,7 +122,7 @@ class ImgUrlConverter
         }
         
         
-        if($detectBaseUrl) {
+        if ($detectBaseUrl) {
             self::$baseUrl = self::getBaseUrlFromHtml($content);
             if (self::$baseUrl) {
                 self::$baseUrl = parse_url(self::$baseUrl, PHP_URL_PATH);
@@ -229,7 +229,6 @@ class ImgUrlConverter
         foreach ($cdnDomains as $cdnDomain) {
             $cdnDomainsForRegexp[] = '\/\/'.preg_quote($cdnDomain, '#');   // plain html
             $cdnDomainsForRegexp[] = '\\/\\/'.preg_quote($cdnDomain, '#'); // html in json
-            
         }
         $cdnDomainsForRegexp = implode("|", $cdnDomainsForRegexp);
         
@@ -397,8 +396,7 @@ class ImgUrlConverter
                 $parseUrl['query'] = trim(json_encode($parseUrl['query']), "'\"");
             }
             //var_dump($parseUrl);exit;
-        }
-        else {
+        } else {
             $parseUrl = parse_url($urlOriginal);
         }
         
@@ -415,6 +413,10 @@ class ImgUrlConverter
         
         $ext = self::strtolower(pathinfo($parseUrl['path'], PATHINFO_EXTENSION));
         if (!in_array($ext, array('png', 'jpg', 'jpeg'))) {
+            return $replaceWithoutOptiPic;
+        }
+        
+        if (self::urlHasPhpScript($urlOriginal)) {
             return $replaceWithoutOptiPic;
         }
         
@@ -519,7 +521,7 @@ class ImgUrlConverter
             $relativeUrl = self::resolveFilename($relativeUrl, $slash);
         }
         
-        if (self::substr($relativeUrl, 0, strlen($slash))==$slash) {
+        if (self::substr($relativeUrl, 0, self::strlen($slash))==$slash) {
             return $relativeUrl;
         }
         /*if (self::substr($relativeUrl, 0, 2)=='\/') { // for json-encoded urls when / --> \/
@@ -533,23 +535,21 @@ class ImgUrlConverter
         //$baseUrl .= '/';
         
         // CASE filepath ".img.png" (remove first dot)
-        if (substr($relativeUrl, 0, 1) == '.' && substr($relativeUrl, 1, 1) != '.') {
-            $relativeUrl = substr($relativeUrl, 1);
+        if (self::substr($relativeUrl, 0, 1) == '.' && self::substr($relativeUrl, 1, 1) != '.') {
+            $relativeUrl = self::substr($relativeUrl, 1);
         }
         // CASE baseUrl "." (remove first dot)
-        if (strlen($baseUrl)>0 && substr($baseUrl, 0, 1) == '.' && substr($baseUrl, 1, 1) != '.') {
-            $baseUrl = (strlen($baseUrl)>1)? "".substr($baseUrl, 1): "";
+        if (self::strlen($baseUrl)>0 && self::substr($baseUrl, 0, 1) == '.' && self::substr($baseUrl, 1, 1) != '.') {
+            $baseUrl = (self::strlen($baseUrl)>1)? "".self::substr($baseUrl, 1): "";
         }
         
         // CASE /catalog + img.png (/catalogimg.png is wrong)
-        if (substr($baseUrl, -1)!='/' && substr($relativeUrl, 0, 1) != '/') {
+        if (self::substr($baseUrl, -1)!='/' && self::substr($relativeUrl, 0, 1) != '/') {
             $tryUrl = str_replace($slash.$slash, $slash, $baseUrl.$slash.$relativeUrl);
             // Try to /catalog/img.png
             if (file_exists(self::getDocumentDoot().$slash.$tryUrl)) {
                 return $tryUrl;
-            }
-            // Try to /img.png
-            else {
+            } else { // Try to /img.png
                 $tryUrl = str_replace($slash.$slash, $slash, '/'.$relativeUrl);
                 if (file_exists(self::getDocumentDoot().$slash.$tryUrl)) {
                     return $tryUrl;
@@ -731,7 +731,7 @@ class ImgUrlConverter
     
     public static function substr($string, $offset, $length = null)
     {
-        return substr($string, $offset, $length);
+        return (($length===null)? substr($string, $offset): substr($string, $offset, $length));
     }
     
     
@@ -755,5 +755,36 @@ class ImgUrlConverter
     public static function getDocumentDoot()
     {
          return $_SERVER['DOCUMENT_ROOT'];
+    }
+    
+    
+    /**
+     * Check if URL has php script logic (no static image)
+     * Examples:
+     * - /index.php?route=product/image/catalog/payment.png
+     * - /manager/?a=system/file/edit&file=assets/template/css/../images/lines.png
+     */
+    public static function urlHasPhpScript($url)
+    {
+        $ext = pathinfo($url, PATHINFO_EXTENSION);
+        $posQ = stripos($url, '?');
+        
+        if (!$posQ) {
+            $posQ = stripos($url, '&');
+            if (!$posQ) {
+                return false;
+            }
+        }
+        
+        if (!$ext) {
+            return true;
+        }
+        
+        $posExt = stripos($url, $ext);
+        if ($posQ < $posExt) {
+            return true;
+        }
+        
+        return false;
     }
 }

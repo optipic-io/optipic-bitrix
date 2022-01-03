@@ -37,7 +37,7 @@ if($isCDN) {
                 array(
                     "CDN_AUTOREPLACE_ACTIVE_{$arSite['LID']}", 
                     GetMessage("ATL_CDN_AUTOREPLACE_ACTIVE"),
-                    "",
+                    "Y",
                     array(
                         "checkbox",
                         "",
