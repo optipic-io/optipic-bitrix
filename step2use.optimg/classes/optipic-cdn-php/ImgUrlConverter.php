@@ -16,7 +16,7 @@ class ImgUrlConverter
     /**
      * Library version number
      */
-    const VERSION = '1.27';
+    const VERSION = '1.29';
     
     /**
      * ID of your site on CDN OptiPic.io service
@@ -53,6 +53,8 @@ class ImgUrlConverter
     public static $url = null;
     
     public static $host = null;
+    
+    public static $additionalDomains = array();
     
     /**
      * Constructor
@@ -323,6 +325,16 @@ class ImgUrlConverter
             
             self::$domains = self::textToArray($source['domains']);
             
+            foreach (self::$domains as $dKey => $domain) {
+                $domainExploded = preg_split("/[\s,]+/siS", $domain);
+                if (!empty($domainExploded[1]) && !empty($domainExploded[0])) {
+                    $domain = trim($domainExploded[0]);
+                    $domainSiteId = (int) trim($domainExploded[1]);
+                    self::$additionalDomains[$domain] = $domainSiteId;
+                    self::$domains[$dKey] = $domain;
+                }
+            }
+            
             self::$exclusionsUrl = self::textToArray($source['exclusions_url']);
             
             self::$whitelistImgUrls = self::textToArray($source['whitelist_img_urls']);
@@ -404,7 +416,7 @@ class ImgUrlConverter
         
         
         if (!empty($parseUrl['host'])) {
-            if (!in_array($parseUrl['host'], self::$domains)) {
+            if (!in_array($parseUrl['host'], self::$domains) && !in_array($parseUrl['host'], array_keys(self::$additionalDomains))) {
                 self::log($urlOriginal, 'callbackForPregReplace -> url original:');
                 self::log($replaceWithoutOptiPic, 'callbackForPregReplace -> url with optipic:');
                 return $replaceWithoutOptiPic;
@@ -426,7 +438,12 @@ class ImgUrlConverter
         }
         $urlOriginal = self::getUrlFromRelative($urlOriginal, self::$baseUrl, $slash);
         
-        $replaceWithOptiPic = $matches[1].$slash.$slash.self::$cdnDomain.$slash.'site-'.self::$siteId.$urlOriginal.$matches[5];
+        $sid = self::$siteId;
+        if (in_array($parseUrl['host'], array_keys(self::$additionalDomains))) {
+            $sid = self::$additionalDomains[$parseUrl['host']];
+        }
+        
+        $replaceWithOptiPic = $matches[1].$slash.$slash.self::$cdnDomain.$slash.'site-'.$sid.$urlOriginal.$matches[5];
         
         self::log($urlOriginal, 'callbackForPregReplace -> url original:');
         self::log($replaceWithOptiPic, 'callbackForPregReplace -> url with optipic:');
@@ -740,6 +757,11 @@ class ImgUrlConverter
         return strtolower($str);
     }
     
+    public static function file_get_contents($filepath)
+    {
+        return file_get_contents($filepath);
+    }
+    
     
     public static function htmlHasAmpMarkup($html)
     {
@@ -786,5 +808,19 @@ class ImgUrlConverter
         }
         
         return false;
+    }
+    
+    
+    
+    public static function getDownloadSource()
+    {
+        $source = false;
+        
+        $filepath = dirname(__FILE__) . '/.source';
+        if (file_exists($filepath)) {
+            return trim(self::file_get_contents($filepath));
+        }
+        
+        return $source;
     }
 }

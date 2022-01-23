@@ -172,11 +172,11 @@ Class step2use_optimg extends CModule
 	{
 		global $APPLICATION, $USER, $step;
 		
-		if(!function_exists("curl_init")) {
+		/*if(!function_exists("curl_init")) {
     		$this->errors []= GetMessage("step2use.optimg_ERROR_CURL");
 		    $APPLICATION->ThrowException(implode("<br>", $this->errors));
 		    return false;
-		}
+		}*/
 		//var_dump($_POST);exit;
 		//$step = IntVal($_POST["step"]);
 		
@@ -221,12 +221,29 @@ Class step2use_optimg extends CModule
                 COption::SetOptionString("step2use.optimg", "LOGIN", $_POST["atl_optipic_user_email"]);
 
 		        // Регистрируем нового юзера в OptiPic.io или перегенерируем пароль
-    		    $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, self::getApiUrl()."register?email=".urlencode($_POST["atl_optipic_user_email"])."&username=".urlencode($_POST["atl_optipic_user_email"])."&from=bitrix&site=". urlencode($_SERVER['HTTP_HOST']));
-                curl_setopt($ch, CURLOPT_HEADER, 0);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                $apiResult = curl_exec($ch);
-                $apiResult = json_decode($apiResult, true);
+                $url = self::getApiUrl()."register?email=".urlencode($_POST["atl_optipic_user_email"])."&username=".urlencode($_POST["atl_optipic_user_email"])."&from=bitrix&site=". urlencode($_SERVER['HTTP_HOST']);
+                
+                if (function_exists('curl_init')) {
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $url);
+                    curl_setopt($ch, CURLOPT_HEADER, 0);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    $apiResult = curl_exec($ch);
+                    $apiResult = json_decode($apiResult, true);
+                    curl_close($ch);
+                }
+                else {
+                    $httpClient = new \Bitrix\Main\Web\HttpClient();
+                    $apiResult = $httpClient->get($url);
+                    $apiResult = json_decode($apiResult, true);
+                    /*var_dump($url);
+                    var_dump($apiResult);
+                    var_dump($info);
+                    exit;*/
+                }
+                
+                
+    		    
                 //var_dump($apiResult); exit;
         
                 global $atlOptipicInstallErrors;

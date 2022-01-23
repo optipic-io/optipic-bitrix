@@ -119,26 +119,43 @@ Class CStepUseOptimg
 		$aModuleMenu[] = $aMenu;
 	}
 
-    public static function getRecommendedTariff($bytesNeeded){
-        $ch = curl_init();
+    public static function getRecommendedTariff($bytesNeeded) {
+        
+        $url = self::getApiUrl()."recommendmetariff?bytes=" . $bytesNeeded;
+        
+        $login = self::getLogin();
+        $password = self::getPassword();
+        
+        $recommendData = '{}';
+        $info  = array();
+        
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
 
-        // установка URL и других необходимых параметров
-        curl_setopt($ch, CURLOPT_URL, self::getApiUrl()."recommendmetariff?bytes=" . $bytesNeeded);
+            // установка URL и других необходимых параметров
+            curl_setopt($ch, CURLOPT_URL, $url);
 
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
 
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, COption::GetOptionString("step2use.optimg", "LOGIN").":".COption::GetOptionString("step2use.optimg", "PASSWORD"));
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_USERPWD, $login.":".$password);
 
+            // загрузка страницы и выдача еЄ браузеру
+            $recommendData = curl_exec($ch);
 
-
-        // загрузка страницы и выдача еЄ браузеру
-        $recommendData = curl_exec($ch);
-
-        $info = curl_getinfo($ch);
+            $info = curl_getinfo($ch);
+            
+        }
+        else {
+            $httpClient = new \Bitrix\Main\Web\HttpClient();
+            $httpClient->setAuthorization($login, $password);
+            $recommendData = $httpClient->post($url);
+            $info["http_code"] = $httpClient->getStatus();
+        }
+        
         return json_decode($recommendData, true);
     }
 
@@ -356,26 +373,45 @@ Class CStepUseOptimg
 	    return (float) $res["CNT"];
 	}
 
-	public static function GetApiEfficiency(){
-        $ch = curl_init();
+	public static function GetApiEfficiency() {
+        
+        $url = self::getApiUrl()."geteffective";
+        
+        $login = self::getLogin();
+        $password = self::getPassword();
+        
+        $efficiencyData = '{}';
+        $info  = array();
+        
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
 
-        // установка URL и других необходимых параметров
-        curl_setopt($ch, CURLOPT_URL, self::getApiUrl()."geteffective");
+            // установка URL и других необходимых параметров
+            curl_setopt($ch, CURLOPT_URL, $url);
 
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
 
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, COption::GetOptionString("step2use.optimg", "LOGIN").":".COption::GetOptionString("step2use.optimg", "PASSWORD"));
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_USERPWD, $login.":".$password);
 
 
 
-        // загрузка страницы и выдача еЄ браузеру
-        $efficiencyData = curl_exec($ch);
+            // загрузка страницы и выдача еЄ браузеру
+            $efficiencyData = curl_exec($ch);
 
-        $info = curl_getinfo($ch);
+            $info = curl_getinfo($ch);
+        }
+        else {
+            $httpClient = new \Bitrix\Main\Web\HttpClient();
+            $httpClient->setAuthorization($login, $password);
+            $efficiencyData = $httpClient->post($url);
+            $info["http_code"] = $httpClient->getStatus();
+        }
+        
+        
         return json_decode($efficiencyData, true);
     }
 
@@ -975,6 +1011,7 @@ Class CStepUseOptimg
         $dump = "[".date("d.m.Y H:i:s")."] ".$filepath."\n";
         $dump .= var_export($options, true)."\n--------------------------\n";
         //file_put_contents($_SERVER['DOCUMENT_ROOT'].'/optipic.txt', $dump, FILE_APPEND);
+        //file_put_contents(__DIR__ . '/optipic.txt', $dump, FILE_APPEND);
         
         if(!$options) {
             return false;
@@ -988,13 +1025,6 @@ Class CStepUseOptimg
 		$localPath = self::getLocalPath($filepath);
         
         //var_dump($filepath);
-        // создание нового ресурса cURL
-        $ch = curl_init();
-
-		$cfile = curl_file_create($filepath);
-        //$imgData = file_get_contents(__DIR__.'/tmp/e52014dd32838a3de07669cd27feda93.png');
-        $imgData = array('file' => $cfile, 'filepath' => $localPath);
-        
         
 
         
@@ -1091,25 +1121,45 @@ Class CStepUseOptimg
             $chUrl .= '&'.http_build_query($addGetOpts);
         }
         
-        // установка URL и других необходимых параметров
-        curl_setopt($ch, CURLOPT_URL, $chUrl);
+        $optiImgData = false;
+        $info = array();
+        
+        if (function_exists('curl_init')) {
+            // создание нового ресурса cURL
+            $ch = curl_init();
+            // установка URL и других необходимых параметров
+            curl_setopt($ch, CURLOPT_URL, $chUrl);
+            
+            $cfile = curl_file_create($filepath);
+            //$imgData = file_get_contents(__DIR__.'/tmp/e52014dd32838a3de07669cd27feda93.png');
+            $imgData = array('file' => $cfile, 'filepath' => $localPath);
 
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $imgData);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $imgData);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
 
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, COption::GetOptionString("step2use.optimg", "LOGIN").":".COption::GetOptionString("step2use.optimg", "PASSWORD"));
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_USERPWD, self::getLogin().":".self::getPassword());
 
+            // загрузка страницы и выдача еЄ браузеру
+            $optiImgData = curl_exec($ch);
 
-
-        // загрузка страницы и выдача еЄ браузеру
-        $optiImgData = curl_exec($ch);
-
-        $info = curl_getinfo($ch);
+            $info = curl_getinfo($ch);
+            
+            // завершение сеанса и освобождение ресурсов
+            curl_close($ch);
+        }
+        else {
+            $httpClient = new \Bitrix\Main\Web\HttpClient();
+            $httpClient->setAuthorization(self::getLogin(), self::getPassword());
+            $imgData = array('file' => fopen($filepath, 'r'), 'filepath' => $localPath);
+            $optiImgData = $httpClient->post($chUrl, $imgData, true);
+            $info["http_code"] = $httpClient->getStatus();
+        }
+        
         //var_dump($info);exit;
 
         // Ќедостаточно средств на счету
@@ -1222,27 +1272,51 @@ Class CStepUseOptimg
 
         //file_put_contents($filepath, $optiImgData);
 
-        // завершение сеанса и освобождение ресурсов
-        curl_close($ch);
+        
 
         return true;
     }
+    
+    
+    public static function getLogin() {
+        return COption::GetOptionString("step2use.optimg", "LOGIN");
+    }
+    
+    
+    public static function getPassword() {
+        return COption::GetOptionString("step2use.optimg", "PASSWORD");
+    }
+    
 
     public static function GetActiveBytes($cdn=false) {
         $url = self::getApiUrl()."getactivebytes";
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, COption::GetOptionString("step2use.optimg", "LOGIN").":".COption::GetOptionString("step2use.optimg", "PASSWORD"));
+        
+        $login = self::getLogin();
+        $password = self::getPassword();
+        
+        $info = array();
+        
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_POSTREDIR, 3); // чтобы POST-данные передавались и при редиректе
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_USERPWD, $login.":".$password);
 
-        $apiResult = curl_exec($ch);
-        $info = curl_getinfo($ch);
-        //var_dump($info);
-        //var_dump($apiResult);
+            $apiResult = curl_exec($ch);
+            $info = curl_getinfo($ch);
+            //var_dump($info);
+            //var_dump($apiResult);
+        }
+        else {
+            $httpClient = new \Bitrix\Main\Web\HttpClient();
+            $httpClient->setAuthorization($login, $password);
+            $apiResult = $httpClient->post($url);
+            $info["http_code"] = $httpClient->getStatus();
+        }
 
         // ќшибка авторизации
         if($info["http_code"]==401) {

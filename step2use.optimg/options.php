@@ -3,6 +3,10 @@
 use Bitrix\Main\Application;
 $request = Application::getInstance()->getContext()->getRequest();
 
+if (class_exists('\optipic\cdn\ImgUrlConverter') == false) {
+    include_once __DIR__.'/classes/optipic-cdn-php/ImgUrlConverter.php';
+}
+
 $isCDN = !is_null($request->getQuery("cdn"));
 
 $MODULE_ID = "step2use.optimg";
@@ -1273,6 +1277,7 @@ $statParams = array(
     'stype' => ($isCDN)? 'cdn': 'classic',
     'append_to' => '#adm-workarea',
     'version' => $arModuleVersion['VERSION'],
+    'source' => \optipic\cdn\ImgUrlConverter::getDownloadSource(),
     //'site_chooser_selector' => "input[name^='OPTIPIC_SITE_ID_']",
 );
 if(!defined('BX_UTF')) {
