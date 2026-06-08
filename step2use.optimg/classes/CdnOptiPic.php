@@ -73,7 +73,7 @@ Class CdnOptiPic {
     }
     
     // replaceImgsUrl
-    function onEndBufferContent(&$content) {
+    public static function onEndBufferContent(&$content) {
         global $APPLICATION;
         $dir = $APPLICATION->GetCurDir();
         
@@ -103,7 +103,7 @@ Class CdnOptiPic {
                 
                 //$content = preg_replace('#(/[^"\'\s]+\.(png|jpg|jpeg))#simS', '//cdn.optipic.io/site-'.$settings['site_id'].'${1}', $content);
                 //$content = preg_replace('#("|\'|\()(/[^"\'\s]+\.(png|jpg|jpeg)?)("|\'|\))#simS', '${1}//cdn.optipic.io/site-'.$settings['site_id'].'${2}${4}', $content);
-                // url РґРѕР»Р¶РµРЅ РЅР°С‡РёРЅР°С‚СЊСЃСЏ СЃ РµРґРёРЅСЃС‚РІРµРЅРЅРѕРіРѕ СЃР»РµС€Р° (РґРІРѕР№РЅС‹Рµ СЃР»РµС€Рё Рё РѕС‚СЃСѓС‚СЃС‚РІРёРµ СЃР»РµС€Р° РїРѕРєР° РЅРµ РѕР±СЂР°Р±Р°С‚С‹РІР°РµРј)
+                // url должен начинаться с единственного слеша (двойные слеши и отсутствие слеша пока не обрабатываем)
                 // $content = preg_replace('#("|\'|\()(/[^/"\'\s]{1}[^"\'\s]*\.(png|jpg|jpeg){1}?)("|\'|\))#simS', '${1}//cdn.optipic.io/site-'.$settings['site_id'].'${2}${4}', $content);
                 
                 
@@ -121,7 +121,7 @@ Class CdnOptiPic {
                 //$content = preg_replace($pattern, $replacement,$content);
                 
                 /*
-                // РџРѕРґРјРµРЅСЏРµРј url РІ С‚РµРіР°С… <img>
+                // Подменяем url в тегах <img>
                 // -----------------------------------------------------------------
                 $imgAttrs = $settings['img_attrs'];
                 //var_dump($imgAttrs);exit;
@@ -218,7 +218,7 @@ Class CdnOptiPic {
             }
             else {
                 
-                // РµСЃР»Рё URL РЅРµ Р°Р±СЃРѕР»СЋС‚РЅС‹Р№ - РїСЂРёРІРѕРґРёРј РµРіРѕ Рє Р°Р±СЃРѕР»СЋС‚РЅРѕРјСѓ
+                // если URL не абсолютный - приводим его к абсолютному
                 if(substr($localUrl, 0, 1)!='/') {
                     $localUrl = $dir.$localUrl;
                 }
@@ -241,7 +241,7 @@ Class CdnOptiPic {
                 //return '<img'.$matches[1].'src='.$quoteSymbol.'//cdn.optipic.io/site-'.$settings['site_id'].$url.$quoteSymbol.$matches[3].'>';
             }
         }
-        // Р•СЃР»Рё URL 
+        // Если URL 
         else {
             return $localUrl;
         }

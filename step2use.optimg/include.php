@@ -26,7 +26,7 @@ Class CStepUseOptimg
         }
     }
 
-	function OnBuildGlobalMenu(&$aGlobalMenu, &$aModuleMenu)
+	public static function OnBuildGlobalMenu(&$aGlobalMenu, &$aModuleMenu)
 	{
 		if($GLOBALS['APPLICATION']->GetGroupRight("main") < "R")
 			return;
@@ -338,7 +338,7 @@ Class CStepUseOptimg
 	    return $res["CNT"];
 	}
 
-    public function GetSizeLeftToCompress(){
+    public static function GetSizeLeftToCompress(){
         global $DB;
         $res = $DB->Query("SELECT SUM(SIZE_ORIGINAL) as CNT FROM atl_optimg_files WHERE SIZE_COMPRESSED=0", false, $err_mess.__LINE__);
         // ALREADY_PROCESSED_TODAY='N'
@@ -1117,7 +1117,7 @@ Class CStepUseOptimg
             $addGetOpts['nostriptags'] = 0;
         }
         // Добавляем доп get-параметры в url
-        if(count($chUrl)) {
+        if(!empty($chUrl)) {
             $chUrl .= '&'.http_build_query($addGetOpts);
         }
         
